@@ -12,9 +12,15 @@ TARGET = common
 TEMPLATE = lib
 CONFIG += staticlib
 
-SOURCES += dropboxpacket.cpp
+SOURCES += dropboxpacket.cpp \
+    namepacket.cpp \
+    clientfilespacket.cpp \
+    clientfilesresppacket.cpp
 
-HEADERS += dropboxpacket.h
+HEADERS += dropboxpacket.h \
+    namepacket.h \
+    clientfilespacket.h \
+    clientfilesresppacket.h
 unix {
     target.path = /usr/lib
     INSTALLS += target

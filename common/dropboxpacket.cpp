@@ -1,6 +1,9 @@
 #include "dropboxpacket.h"
 
-
-DropBoxPacket::DropBoxPacket()
+QDataStream& operator >>(QDataStream& in, PacketType& e)
 {
+    quint32 buffer;
+    in >> buffer;
+    e = PacketType(buffer);
+    return in;
 }
