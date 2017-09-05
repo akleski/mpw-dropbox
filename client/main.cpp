@@ -1,4 +1,5 @@
 
+#include <QDir>
 #include <QDebug>
 #include <QCoreApplication>
 #include <QCommandLineParser>
@@ -7,7 +8,7 @@
 
 int main(int argc, char *argv[])
 {
-    QCoreApplication a(argc, argv);
+    QCoreApplication app(argc, argv);
 
     QCoreApplication::setApplicationName("dropboxcli");
     QCoreApplication::setApplicationVersion("1.0");
@@ -28,10 +29,17 @@ int main(int argc, char *argv[])
     parser.addOption(directoryOption);
 
     // Process the actual command line arguments given by the user
-    parser.process(a);
+    parser.process(app);
 
-    Client cli(parser.value(userOption), parser.value(directoryOption));
+    QDir dir(parser.value(directoryOption));
+    if(!dir.exists())
+    {
+        qDebug() << "dir ("<<dir.absolutePath()<<") doesnt exists!";
+        return 0;
+    }
+
+    Client cli(parser.value(userOption), dir.absolutePath());
     cli.start();
 
-    return 0;//a.exec();
+    return 0;//app.exec();
 }

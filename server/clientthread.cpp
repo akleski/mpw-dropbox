@@ -1,6 +1,9 @@
 #include "clientthread.h"
 
+#include "dropboxpacket.h"
+
 #include <QTcpSocket>
+#include <QDebug>
 
 ClientThread::ClientThread(int socketDescriptor, QObject *parent)
 : QThread(parent),
@@ -22,17 +25,35 @@ void ClientThread::run()
     if(mTcpSocket->waitForConnected())
         qDebug("Connected!");
 
-    qDebug()<< "waitfor read ready: " <<mTcpSocket->waitForReadyRead();
-    char buf[1024];
-    qDebug()<<mTcpSocket->readLine(buf, sizeof(buf));
-    qDebug()<<buf;
     exec();
 }
 
 void ClientThread::processData()
 {
-    qDebug()<< __FUNCTION__;
-    char buf[1024];
-    mTcpSocket->readLine(buf, sizeof(buf));
-    qDebug()<<buf;
+    QDataStream clientReadStream(mTcpSocket);
+    quint32 next_block_size = 0;
+    while(true) {
+        if (!next_block_size) {
+            if (mTcpSocket->bytesAvailable() < sizeof(quint32)) { // are size data available
+                break;
+            }
+            clientReadStream >> next_block_size;
+        }
+
+        if (mTcpSocket->bytesAvailable() < next_block_size) {
+            break;
+        }
+        PacketType type;
+        clientReadStream >> type;
+
+        switch(type){
+        case PacketType::Name:
+            NamePacket namePacket;
+            clientReadStream >> namePacket;
+            qDebug() << "NamePacket name: " << namePacket.name();
+            break;
+        }
+
+        next_block_size = 0;
+    }
 }

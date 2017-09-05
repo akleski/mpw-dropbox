@@ -22,3 +22,7 @@ SOURCES += main.cpp \
 HEADERS += \
     server.h \
     clientthread.h
+
+
+INCLUDEPATH += ../common
+LIBS += -L../common/debug -lcommon

@@ -20,3 +20,6 @@ SOURCES += main.cpp \
 
 HEADERS += \
     client.h
+
+INCLUDEPATH += ../common
+LIBS += -L../common/debug -lcommon

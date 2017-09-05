@@ -1,27 +1,30 @@
 #ifndef DROPBOXPACKET_H
 #define DROPBOXPACKET_H
 
-#include <QDataStream>
+#include "namepacket.h"
+#include "nameresponsepacket.h"
+#include "getserverfilespacket.h"
+#include "getserverfilesresponsepacket.h"
+#include "uploadfilespacket.h"
+#include "uploadfilesresponsepacket.h"
+#include "downloadfilespacket.h"
+#include "downloadfilepacket.h"
+#include "downloadfilesresponsepacket.h"
 
 enum PacketType
 {
     Name,
-    NameResp,//not used?
+    NameResp,
 
-    ClientFiles,
-    ClientFilesResp,
+    GetServerFiles,
+    GetServerFilesResp,
 
-    GetFiles,
-    GetFilesResp,
+    UploadFiles,
+    UploadFilesResp,
 
-    GetFile,
-    GetFileResp,
-
-    SendFiles,
-    SendFilesResp,
-
-    SendFile,
-    SendFileResp
+    DownloadFiles,
+    DownloadFile,
+    DownloadFilesResp,
 };
 
 QDataStream& operator >>(QDataStream& in, PacketType& e);

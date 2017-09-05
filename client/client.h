@@ -2,6 +2,8 @@
 #define CLIENT_H
 
 #include <QObject>
+#include <QFileSystemWatcher>
+#include <QDir>
 
 QT_BEGIN_NAMESPACE
 class QTcpSocket;
@@ -16,14 +18,28 @@ public:
 
     void start();
 
+    void sendName();
+
 signals:
 
 public slots:
+    void localFolderChanged(QString dir);
 
 private:
+
+    enum ClientState {
+        Starting,
+        SendingFiles,
+        DownloadingFiles,
+        Monitoring
+    };
+    ClientState mState;
     QString mUser;
-    QString mPath;
+    QDir mPath;
     QTcpSocket *mTcpSocket;
+    QFileSystemWatcher mFileSystemWatcher;
+    QStringList mLocalFiles;
+    QStringList mNewFiles;
 };
 
 #endif // CLIENT_H

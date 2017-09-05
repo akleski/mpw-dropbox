@@ -14,13 +14,25 @@ CONFIG += staticlib
 
 SOURCES += dropboxpacket.cpp \
     namepacket.cpp \
-    clientfilespacket.cpp \
-    clientfilesresppacket.cpp
+    nameresponsepacket.cpp \
+    getserverfilespacket.cpp \
+    getserverfilesresponsepacket.cpp \
+    uploadfilespacket.cpp \
+    uploadfilesresponsepacket.cpp \
+    downloadfilespacket.cpp \
+    downloadfilepacket.cpp \
+    downloadfilesresponsepacket.cpp
 
 HEADERS += dropboxpacket.h \
     namepacket.h \
-    clientfilespacket.h \
-    clientfilesresppacket.h
+    nameresponsepacket.h \
+    getserverfilespacket.h \
+    getserverfilesresponsepacket.h \
+    uploadfilespacket.h \
+    uploadfilesresponsepacket.h \
+    downloadfilespacket.h \
+    downloadfilepacket.h \
+    downloadfilesresponsepacket.h
 unix {
     target.path = /usr/lib
     INSTALLS += target

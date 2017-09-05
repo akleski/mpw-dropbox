@@ -1,6 +1,10 @@
 #include "namepacket.h"
 #include <QString>
 
+NamePacket::NamePacket() : mName()
+{
+}
+
 NamePacket::NamePacket(QString name) : mName(name)
 {
 }
@@ -18,7 +22,6 @@ void NamePacket::setName(const QString &name)
 {
     mName = name;
 }
-
 
 QDataStream &operator<<(QDataStream &out, const NamePacket &packet)
 {

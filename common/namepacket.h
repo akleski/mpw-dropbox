@@ -1,12 +1,14 @@
 #ifndef NAMEPACKET_H
 #define NAMEPACKET_H
 
-#include "dropboxpacket.h"
+#include <QString>
+#include <QDataStream>
 
 class NamePacket
 {
 public:
     NamePacket(QString name);
+    NamePacket();
     ~NamePacket();
 
     QString name() const;
