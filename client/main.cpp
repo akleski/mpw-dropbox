@@ -41,5 +41,5 @@ int main(int argc, char *argv[])
     Client cli(parser.value(userOption), dir.absolutePath());
     cli.start();
 
-    return 0;//app.exec();
+    return app.exec();
 }

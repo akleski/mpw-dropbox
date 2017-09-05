@@ -25,6 +25,8 @@ signals:
 public slots:
     void localFolderChanged(QString dir);
 
+    void receive();
+
 private:
 
     enum ClientState {

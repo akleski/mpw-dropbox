@@ -29,7 +29,9 @@ void Client::start()
 
     mTcpSocket->connectToHost("localhost", 6543);
     if (mTcpSocket->waitForConnected(1000))
-        qDebug("Connected!");
+        qDebug() << "Connected!";
+
+    sendName();
 }
 
 void Client::sendName()
@@ -66,4 +68,9 @@ void Client::localFolderChanged(QString /*dir*/)
         //send file to server
         mNewFiles.clear();
     }
+}
+
+void Client::receive()
+{
+
 }

@@ -24,6 +24,8 @@ void ClientThread::run()
     connect(mTcpSocket, SIGNAL(disconnected()), this, SLOT(terminate()));
     if(mTcpSocket->waitForConnected())
         qDebug("Connected!");
+    else
+         qDebug("Not connected!");
 
     exec();
 }
@@ -47,10 +49,28 @@ void ClientThread::processData()
         clientReadStream >> type;
 
         switch(type){
-        case PacketType::Name:
+        case Name:
+        {
             NamePacket namePacket;
             clientReadStream >> namePacket;
             qDebug() << "NamePacket name: " << namePacket.name();
+            break;
+        }
+        case NameResp:
+            break;
+        case GetServerFiles:
+            break;
+        case GetServerFilesResp:
+            break;
+        case UploadFiles:
+            break;
+        case UploadFilesResp:
+            break;
+        case DownloadFiles:
+            break;
+        case DownloadFile:
+            break;
+        case DownloadFilesResp:
             break;
         }
 
