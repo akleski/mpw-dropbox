@@ -72,5 +72,8 @@ void Client::localFolderChanged(QString /*dir*/)
 
 void Client::receive()
 {
+    QByteArray Data = mTcpSocket->readAll();
 
+    // will write on server side window
+    qDebug() << " Data in: " << Data;
 }

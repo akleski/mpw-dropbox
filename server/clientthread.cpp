@@ -54,6 +54,11 @@ void ClientThread::processData()
             NamePacket namePacket;
             clientReadStream >> namePacket;
             qDebug() << "NamePacket name: " << namePacket.name();
+
+            QByteArray buff;
+            QDataStream ds(&buff, QIODevice::ReadWrite);
+            ds << "name OK!";
+            mTcpSocket->write(buff);
             break;
         }
         case NameResp:
