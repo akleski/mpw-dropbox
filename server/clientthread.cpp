@@ -9,13 +9,14 @@ ClientThread::ClientThread(int socketDescriptor, QObject *parent)
 : QThread(parent),
   socketDescriptor(socketDescriptor)
 {
-
+    qDebug() << __FUNCTION__;
     connect(this, SIGNAL(namePacketReceived()), this, SLOT(namePacketReceived()), Qt::QueuedConnection);
 
 }
 
 void ClientThread::run()
 {
+    qDebug() << __FUNCTION__;
     mTcpSocket = new QTcpSocket(NULL);
     if (!mTcpSocket->setSocketDescriptor(socketDescriptor)) {
         emit error(mTcpSocket->error());
@@ -34,6 +35,7 @@ void ClientThread::run()
 
 void ClientThread::processData()
 {
+    qDebug() << __FUNCTION__;
     QDataStream clientReadStream(mTcpSocket);
     quint32 next_block_size = 0;
     while(true)
@@ -61,24 +63,43 @@ void ClientThread::processData()
             NamePacket namePacket;
             clientReadStream >> namePacket;
             qDebug() << "NamePacket name: " << namePacket.name();
+            mUser = namePacket.name();
             emit namePacketReceived();
             break;
         }
-        case NameResp:
-            break;
         case GetServerFiles:
+        {
+            GetServerFilesPacket packet;
+            clientReadStream >> packet;
+
+            emit getServerFilesPacketReceived(mUser);
             break;
-        case GetServerFilesResp:
-            break;
+        }
+
         case UploadFiles:
+        {
+            UploadFilesPacket packet;
+            clientReadStream >> packet;
+
+            emit uploadFiles(mUser, packet.files());
             break;
-        case UploadFilesResp:
-            break;
+        }
         case DownloadFiles:
+        {
+            DownloadFilesPacket packet;
+            clientReadStream >> packet;
+
+            emit downloadFiles(mUser, packet.files());
             break;
+        }
+
+        case NameResp:
+        case GetServerFilesResp:
+        case UploadFilesResp:
         case DownloadFile:
-            break;
         case DownloadFilesResp:
+        default:
+            qDebug()<<"unexpected packet - this should not happen... ";
             break;
         }
     }
@@ -86,7 +107,44 @@ void ClientThread::processData()
 
 void ClientThread::replyToNamePacket()
 {
-    NameResponsePacket response("OK");
+    qDebug() << __FUNCTION__;
+    NameResponsePacket resp("OK");
 
-    DropboxPacket::sendPacket(mTcpSocket, NameResp, &response);
+    DropboxPacket::sendPacket(mTcpSocket, NameResp, &resp);
+}
+
+void ClientThread::replyToGetServerFiles(QStringList files)
+{
+    qDebug() << __FUNCTION__;
+    GetServerFilesResponsePacket resp;
+    resp.setFiles(files);
+
+    DropboxPacket::sendPacket(mTcpSocket, GetServerFilesResp, &resp);
+}
+
+void ClientThread::replyToUploadFiles(QString status)
+{
+    qDebug() << __FUNCTION__;
+    UploadFilesResponsePacket resp;
+    resp.setStatus(status);
+
+    DropboxPacket::sendPacket(mTcpSocket, UploadFilesResp, &resp);
+}
+
+void ClientThread::fileReadyForDownload(QString file)
+{
+    qDebug() << __FUNCTION__;
+    DownloadFilePacket resp;
+    resp.setFile(file);
+
+    DropboxPacket::sendPacket(mTcpSocket, DownloadFile, &resp);
+}
+
+void ClientThread::allFilesDownloaded()
+{
+    qDebug() << __FUNCTION__;
+    DownloadFilesResponsePacket resp;
+    resp.setStatus("OK");
+
+    DropboxPacket::sendPacket(mTcpSocket, DownloadFilesResp, &resp);
 }

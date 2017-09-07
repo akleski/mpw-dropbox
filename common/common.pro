@@ -32,7 +32,8 @@ HEADERS += dropboxpacket.h \
     uploadfilesresponsepacket.h \
     downloadfilespacket.h \
     downloadfilepacket.h \
-    downloadfilesresponsepacket.h
+    downloadfilesresponsepacket.h \
+    common.h
 unix {
     target.path = /usr/lib
     INSTALLS += target

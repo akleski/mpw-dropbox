@@ -1,8 +1,11 @@
-#include "client.h"
-#include "dropboxpacket.h"
 
 #include <QTcpSocket>
 #include <QFile>
+#include <QHostAddress>
+
+#include "client.h"
+#include "dropboxpacket.h"
+#include "common.h"
 
 Client::Client(QString user, QString path, QObject *parent) :
  QObject(parent)
@@ -44,7 +47,7 @@ void Client::start()
 
     connect(mTcpSocket, SIGNAL(readyRead()), this, SLOT(receive()));
 
-    mTcpSocket->connectToHost("localhost", 6543);
+    mTcpSocket->connectToHost(QHostAddress(DROPBOX_SERVER_ADDRESS), 6543);
     if (mTcpSocket->waitForConnected(1000))
         qDebug() << "Connected!";
 

@@ -17,11 +17,13 @@ TEMPLATE = app
 
 SOURCES += main.cpp \
     server.cpp \
-    clientthread.cpp
+    clientthread.cpp \
+    workerthread.cpp
 
 HEADERS += \
     server.h \
-    clientthread.h
+    clientthread.h \
+    workerthread.h
 
 
 INCLUDEPATH += ../common
