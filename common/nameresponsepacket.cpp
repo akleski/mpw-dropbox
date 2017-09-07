@@ -1,5 +1,9 @@
 #include "nameresponsepacket.h"
 
+NameResponsePacket::NameResponsePacket()
+{
+}
+
 NameResponsePacket::NameResponsePacket(const QString &status)
     : mStatus(status)
 {

@@ -10,6 +10,8 @@ ClientThread::ClientThread(int socketDescriptor, QObject *parent)
   socketDescriptor(socketDescriptor)
 {
 
+    connect(this, SIGNAL(namePacketReceived()), this, SLOT(namePacketReceived()), Qt::QueuedConnection);
+
 }
 
 void ClientThread::run()
@@ -34,9 +36,12 @@ void ClientThread::processData()
 {
     QDataStream clientReadStream(mTcpSocket);
     quint32 next_block_size = 0;
-    while(true) {
-        if (!next_block_size) {
-            if (mTcpSocket->bytesAvailable() < sizeof(quint32)) { // are size data available
+    while(true)
+    {
+        if (!next_block_size)
+        {
+            if (mTcpSocket->bytesAvailable() < sizeof(quint32))
+            {
                 break;
             }
             clientReadStream >> next_block_size;
@@ -48,17 +53,15 @@ void ClientThread::processData()
         PacketType type;
         clientReadStream >> type;
 
+        qDebug() << "received packet - type: " << type;
+
         switch(type){
         case Name:
         {
             NamePacket namePacket;
             clientReadStream >> namePacket;
             qDebug() << "NamePacket name: " << namePacket.name();
-
-            QByteArray buff;
-            QDataStream ds(&buff, QIODevice::ReadWrite);
-            ds << "name OK!";
-            mTcpSocket->write(buff);
+            emit namePacketReceived();
             break;
         }
         case NameResp:
@@ -78,7 +81,12 @@ void ClientThread::processData()
         case DownloadFilesResp:
             break;
         }
-
-        next_block_size = 0;
     }
+}
+
+void ClientThread::replyToNamePacket()
+{
+    NameResponsePacket response("OK");
+
+    DropboxPacket::sendPacket(mTcpSocket, NameResp, &response);
 }

@@ -11,6 +11,8 @@
 #include "downloadfilepacket.h"
 #include "downloadfilesresponsepacket.h"
 
+class QTcpSocket;
+
 enum PacketType
 {
     Name,
@@ -25,6 +27,13 @@ enum PacketType
     DownloadFiles,
     DownloadFile,
     DownloadFilesResp,
+};
+
+class DropboxPacket
+{
+public:
+
+    static void sendPacket(QTcpSocket* socket, PacketType type, void* packet);
 };
 
 QDataStream& operator >>(QDataStream& in, PacketType& e);

@@ -22,17 +22,37 @@ public:
 
 signals:
 
+    void nameRespReceived();
+
+    void serverFilesRespReceived(QStringList files);
+
+    void filesUploaded();
+
+    void fileDownloaded(QString);
+
+    void allFilesDownloaded();
+
 public slots:
     void localFolderChanged(QString dir);
 
     void receive();
 
+    void requestServerFiles();
+
+    void processServerFiles(QStringList files);
+
+    void writeFileToLocal(QString file);
+
+    void startMonitoring();
+
+    void uploadNewFiles();
+
 private:
 
     enum ClientState {
         Starting,
-        SendingFiles,
         DownloadingFiles,
+        SendingFiles,
         Monitoring
     };
     ClientState mState;

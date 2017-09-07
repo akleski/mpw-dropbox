@@ -7,6 +7,7 @@
 class NameResponsePacket
 {
 public:
+    NameResponsePacket();
     NameResponsePacket(const QString &status);
 
     QString status() const;

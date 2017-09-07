@@ -17,8 +17,11 @@ public:
 signals:
     void error(QTcpSocket::SocketError socketError);
 
+    void namePacketReceived();
+
 public slots:
     void processData();
+    void replyToNamePacket();
 
 private:
     int socketDescriptor;
