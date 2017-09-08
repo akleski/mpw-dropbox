@@ -26,15 +26,10 @@ enum PacketType
 
     DownloadFiles,
     DownloadFile,
-    DownloadFilesResp,
+    DownloadFilesResp
 };
 
-class DropboxPacket
-{
-public:
-
-    static void sendPacket(QTcpSocket* socket, PacketType type, void* packet);
-};
+const char * getTextForPacketType( int enumVal );
 
 QDataStream& operator >>(QDataStream& in, PacketType& e);
 

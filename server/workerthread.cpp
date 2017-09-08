@@ -1,25 +1,23 @@
 
-#include <QDebug>
-
 #include "workerthread.h"
 
 WorkerThread::WorkerThread(QString id, QObject *parent)
     : QThread(parent)
     , mId(id)
-    , mStorage(QDir::currentPath()+mId)
+    , mStorage(QDir::currentPath()+"/"+mId)
 {
-    qDebug() << __FUNCTION__ << " path: " << mStorage.absolutePath();
-    mStorage.mkpath(QDir::currentPath()+mId);
+    printf("%s path: %s\n", __FUNCTION__, mStorage.absolutePath().toStdString().c_str()); fflush(stdout);
+    mStorage.mkpath(mStorage.absolutePath());
 }
 
 WorkerThread::~WorkerThread()
 {
-    qDebug() << __FUNCTION__;
+    printf("%s\n", __FUNCTION__);fflush(stdout);
 }
 
 void WorkerThread::run()
 {
-    qDebug() << __FUNCTION__;
+    printf("%s\n", __FUNCTION__);fflush(stdout);
     exec();
 }
 

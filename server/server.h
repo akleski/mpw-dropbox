@@ -4,7 +4,7 @@
 #include <QTcpServer>
 #include <QList>
 
-class ClientThread;
+class ClientHandler;
 class WorkerThread;
 
 class Server : public QTcpServer
@@ -22,13 +22,17 @@ public slots:
 
     void clientThreadFinished();
 
+    void getServerFilesForUser(qint64, QString);
+    void uploadFiles(qint64, QString, QStringList);
+    void downloadFiles(qint64, QString, QStringList);
+
 protected:
     virtual void incomingConnection(qintptr socketDescriptor);
 
 private:
     QList<WorkerThread*> mWorkers;
 
-    QList<ClientThread*> mClientThreads;
+    QHash<qint64, ClientHandler*> mClientThreads;
 };
 
 #endif // SERVER_H

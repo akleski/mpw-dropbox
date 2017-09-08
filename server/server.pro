@@ -14,16 +14,19 @@ CONFIG   -= app_bundle
 
 TEMPLATE = app
 
+DEFINES *= QT_USE_QSTRINGBUILDER
 
 SOURCES += main.cpp \
     server.cpp \
-    clientthread.cpp \
-    workerthread.cpp
+    workerthread.cpp \
+    clienthandler.cpp \
+    clientworker.cpp
 
 HEADERS += \
     server.h \
-    clientthread.h \
-    workerthread.h
+    workerthread.h \
+    clienthandler.h \
+    clientworker.h
 
 
 INCLUDEPATH += ../common

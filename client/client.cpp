@@ -4,7 +4,6 @@
 #include <QHostAddress>
 
 #include "client.h"
-#include "dropboxpacket.h"
 #include "common.h"
 
 Client::Client(QString user, QString path, QObject *parent) :
@@ -45,7 +44,7 @@ void Client::start()
     qDebug() << __FUNCTION__;
     mTcpSocket = new QTcpSocket(this);
 
-    connect(mTcpSocket, SIGNAL(readyRead()), this, SLOT(receive()));
+    connect(mTcpSocket, SIGNAL(readyRead()), this, SLOT(receive()), Qt::DirectConnection);
 
     mTcpSocket->connectToHost(QHostAddress(DROPBOX_SERVER_ADDRESS), 6543);
     if (mTcpSocket->waitForConnected(1000))
@@ -58,7 +57,7 @@ void Client::sendName()
 {
     qDebug() << __FUNCTION__;
     NamePacket namePacket(mUser);
-    DropboxPacket::sendPacket(mTcpSocket, Name, &namePacket);
+    sendPacket(Name, &namePacket);
 }
 
 void Client::localFolderChanged(QString /*dir*/)
@@ -102,7 +101,7 @@ void Client::receive()
         PacketType type;
         clientReadStream >> type;
 
-        qDebug() << "received packet - type: " << type;
+        qDebug() << "received packet - type: " << getTextForPacketType(type);
 
         switch(type){
             case NameResp:
@@ -166,7 +165,7 @@ void Client::requestServerFiles()
 {
     qDebug() << __FUNCTION__;
     GetServerFilesPacket packet;
-    DropboxPacket::sendPacket(mTcpSocket, GetServerFiles, &packet);
+    sendPacket(GetServerFiles, &packet);
 }
 
 void Client::processServerFiles(QStringList files)
@@ -183,16 +182,18 @@ void Client::processServerFiles(QStringList files)
         downloadFiles << *i;
     }
 
-    qDebug() << "localOnlyFiles: ";
+    qDebug() << "localOnlyFiles: " << localOnlyFiles.count();
     for (QSet<QString>::iterator i = localOnlyFiles.begin(); i != localOnlyFiles.end();++i)
     {
         qDebug() << *i;
         mNewFiles << *i;
     }
 
+    qDebug() << "DownloadFilesPacket";
     DownloadFilesPacket packet;
     packet.setFiles(downloadFiles);
-    DropboxPacket::sendPacket(mTcpSocket, DownloadFiles, &packet);
+    qDebug() << "sendPacket";
+    sendPacket(DownloadFiles, &packet);
     mState = DownloadingFiles;
 }
 
@@ -215,7 +216,84 @@ void Client::uploadNewFiles()
     qDebug() << __FUNCTION__;
     UploadFilesPacket packet;
     packet.setFiles(mNewFiles);
-    DropboxPacket::sendPacket(mTcpSocket, UploadFiles, &packet);
+    sendPacket(UploadFiles, &packet);
     mState = SendingFiles;
     mNewFiles.clear();
+}
+
+void Client::sendPacket(PacketType type, void *packet)
+{
+    QByteArray block;
+    QDataStream sendStream(&block, QIODevice::ReadWrite);
+
+    sendStream << quint32(0) //placeholder for size
+               << type; //packet type
+
+    switch(type)
+    {
+    case Name:
+    {
+        NamePacket* obj = static_cast<NamePacket*>(packet);
+        sendStream << (*obj);
+        break;
+    }
+    case NameResp:
+    {
+        NameResponsePacket* obj = static_cast<NameResponsePacket*>(packet);
+        sendStream << (*obj);
+        break;
+    }
+    case GetServerFiles:
+    {
+        GetServerFilesPacket* obj = static_cast<GetServerFilesPacket*>(packet);
+        sendStream << (*obj);
+        break;
+    }
+    case GetServerFilesResp:
+    {
+        GetServerFilesResponsePacket* obj =
+                static_cast<GetServerFilesResponsePacket*>(packet);
+        sendStream << (*obj);
+        break;
+    }
+    case UploadFiles:
+    {
+        UploadFilesPacket* obj = static_cast<UploadFilesPacket*>(packet);
+        sendStream << (*obj);
+        break;
+    }
+    case UploadFilesResp:
+    {
+        UploadFilesResponsePacket* obj =
+                static_cast<UploadFilesResponsePacket*>(packet);
+        sendStream << (*obj);
+        break;
+    }
+    case DownloadFiles:
+    {
+        DownloadFilesPacket* obj = static_cast<DownloadFilesPacket*>(packet);
+        sendStream << (*obj);
+        break;
+    }
+    case DownloadFile:
+    {
+        DownloadFilePacket* obj = static_cast<DownloadFilePacket*>(packet);
+        sendStream << (*obj);
+        break;
+    }
+    case DownloadFilesResp:
+    {
+        DownloadFilesResponsePacket* obj =
+                static_cast<DownloadFilesResponsePacket*>(packet);
+        sendStream << (*obj);
+        break;
+    }
+    }
+
+    //update size
+    sendStream.device()->seek(0);
+    sendStream << (quint32)(block.size() - sizeof(quint32));
+
+    qint64 ret = mTcpSocket->write(block);
+    printf("send packet: %s bytes sent: %lld\n", getTextForPacketType(type), ret);fflush(stdout);
 }

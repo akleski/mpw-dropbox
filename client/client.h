@@ -5,6 +5,8 @@
 #include <QFileSystemWatcher>
 #include <QDir>
 
+#include "dropboxpacket.h"
+
 QT_BEGIN_NAMESPACE
 class QTcpSocket;
 QT_END_NAMESPACE
@@ -46,6 +48,10 @@ public slots:
     void startMonitoring();
 
     void uploadNewFiles();
+
+private:
+
+    void sendPacket(PacketType type, void *packet);
 
 private:
 
