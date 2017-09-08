@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <QStringBuilder>
 #include <unistd.h>
+#include <QCoreApplication>
 
 ClientHandler::ClientHandler(qintptr socketDescriptor, QObject *parent)
 : QObject(parent),
@@ -17,20 +18,21 @@ void ClientHandler::start()
 {
     printf("%s\n", __FUNCTION__);fflush(stdout);
 
-    mThread = new QThread();
-    mWorker = new ClientWorker();
-    mWorker->setSocketDescriptor(mSocketDescriptor);
-    mWorker->moveToThread(mThread);
+    mTcpSocket = new QTcpSocket(this);
 
-    connect(mWorker, SIGNAL(connected()), this, SLOT(socketConnected()), Qt::QueuedConnection);
-    connect(mThread, SIGNAL(started()), mWorker, SLOT(process()));
-    connect(mWorker, SIGNAL(finished()), mThread, SLOT(quit()));
-    connect(mWorker, SIGNAL(finished()), mWorker, SLOT(deleteLater()));
-    connect(mThread, SIGNAL(finished()), mThread, SLOT(deleteLater()));
+    if (!mTcpSocket->setSocketDescriptor(mSocketDescriptor)) {
+        printf("ERROR!!!\n");fflush(stdout);
+        return;
+    }
+    if(mTcpSocket->waitForConnected()){
+        printf("Connected!\n");fflush(stdout);
+    }
+    else{
+         printf("Not connected!\n");fflush(stdout);
+    }
 
     connect(this, SIGNAL(namePacketReceived()), this, SLOT(replyToNamePacket()), Qt::QueuedConnection);
-
-    mThread->start();
+    connect(mTcpSocket, SIGNAL(readyRead()), this, SLOT(processData()), Qt::AutoConnection);
 }
 
 void ClientHandler::processData()
@@ -157,13 +159,6 @@ void ClientHandler::setSocketDescriptor(const qintptr &value)
     mSocketDescriptor = value;
 }
 
-void ClientHandler::socketConnected()
-{
-    printf("%s\n", __FUNCTION__);fflush(stdout);
-    mTcpSocket = mWorker->tcpSocket();
-    connect(mTcpSocket, SIGNAL(readyRead()), this, SLOT(processData()), Qt::AutoConnection);
-}
-
 void ClientHandler::sendPacket(PacketType type, void *packet)
 {
     printf("%s %s\n",__FUNCTION__, getTextForPacketType(type));fflush(stdout);
@@ -238,5 +233,12 @@ void ClientHandler::sendPacket(PacketType type, void *packet)
     sendStream.device()->seek(0);
     sendStream << (quint32)(block.size() - sizeof(quint32));
 
-    mWorker->packetsToSend().enqueue(block);
+    qint64 ret = mTcpSocket->write(block);
+    mTcpSocket->flush();
+    printf("send packet bytes sent: %lld\n", ret);fflush(stdout);
+}
+
+QString ClientHandler::getUser() const
+{
+    return mUser;
 }

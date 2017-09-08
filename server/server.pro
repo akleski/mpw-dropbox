@@ -9,7 +9,7 @@ QT       += core network
 QT       -= gui
 
 TARGET = server
-CONFIG   += console
+CONFIG   += qt console thread
 CONFIG   -= app_bundle
 
 TEMPLATE = app
@@ -18,15 +18,17 @@ DEFINES *= QT_USE_QSTRINGBUILDER
 
 SOURCES += main.cpp \
     server.cpp \
-    workerthread.cpp \
     clienthandler.cpp \
-    clientworker.cpp
+    storagecontroller.cpp \
+    storageworker.cpp \
+    storagetask.cpp
 
 HEADERS += \
     server.h \
-    workerthread.h \
     clienthandler.h \
-    clientworker.h
+    storagecontroller.h \
+    storageworker.h \
+    storagetask.h
 
 
 INCLUDEPATH += ../common

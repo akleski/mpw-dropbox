@@ -6,17 +6,19 @@
 #include "server.h"
 #include "clienthandler.h"
 #include "common.h"
-#include "workerthread.h"
+#include "storagecontroller.h"
 
 Server::Server(QObject *parent) : QTcpServer(parent)
 {
     printf("%s\n", __FUNCTION__);fflush(stdout);
     for(int i = 0; i < 5; ++i)
     {
-        WorkerThread* worker = new WorkerThread(QString::number(i), this);
-        mWorkers.append(worker);
-        worker->start();
+        StorageController* worker = new StorageController(i, this);
+        mWorkers.insert(i, worker);
+        connect(worker, SIGNAL(downloadTaskFinished(int,qint64,QString)), this, SLOT(downloadTaskFinished(int,qint64,QString)), Qt::QueuedConnection);
+        connect(worker, SIGNAL(uploadTaskFinished(int,qint64,QString)), this, SLOT(uploadTaskFinished(int,qint64,QString)), Qt::QueuedConnection);
     }
+    connect(this, SIGNAL(newTasks()), this, SLOT(assignTasks()), Qt::QueuedConnection);
 }
 
 Server::~Server()
@@ -40,52 +42,91 @@ void Server::clientThreadFinished()
 {
     printf("%s\n", __FUNCTION__);fflush(stdout);
     ClientHandler* thread = (ClientHandler*)this->sender();
-    mClientThreads.remove(thread->socketDescriptor());
+    mClients.remove(thread->socketDescriptor());
 }
 
 void Server::getServerFilesForUser(qint64 clientSocketDesc, QString user)
 {
     printf("%s\n", __FUNCTION__);fflush(stdout);
     QStringList files;
-    for(int i = 0; i< 15; ++i){
-        files << "file"+QString::number(i)+".txt";
-    }
-    QGenericReturnArgument ret;
-    metaObject()->invokeMethod(mClientThreads.value(clientSocketDesc),
+
+    files.append(mClientFiles.value(user));
+
+    metaObject()->invokeMethod(mClients.value(clientSocketDesc),
                                "replyToGetServerFiles",
                                Qt::QueuedConnection,
-                               ret,
                                Q_ARG(QStringList, files));
 }
 
 void Server::uploadFiles(qint64 clientSocketDesc, QString user, QStringList files)
 {
     printf("%s\n", __FUNCTION__);fflush(stdout);
+    QStringList userFiles;
+    foreach (QString file, files) {
+        userFiles.append(user+"/"+file);
+    }
+    mUploadTasks[user].insert(clientSocketDesc,userFiles);
 
-    QGenericReturnArgument ret;
-    metaObject()->invokeMethod(mClientThreads.value(clientSocketDesc),
-                               "replyToUploadFiles",
-                               Qt::QueuedConnection,
-                               ret,
-                               Q_ARG(QString, "OK"));
+    emit newTasks();
 }
 
 void Server::downloadFiles(qint64 clientSocketDesc, QString user, QStringList files)
 {
     printf("%s\n", __FUNCTION__);fflush(stdout);
-    QGenericReturnArgument ret;
-    ClientHandler* client = mClientThreads.value(clientSocketDesc);
+
     foreach (QString file, files) {
-        metaObject()->invokeMethod(client,
-                                   "fileReadyForDownload",
-                                   Qt::QueuedConnection,
-                                   ret,
-                                   Q_ARG(QString, file));
+        QString userfile = user + "/" + file;
+        int storageId = mClientFileStorage.value(userfile, -1);
+        if(storageId >= 0){
+            mDownloadTasks[user][clientSocketDesc].append(userfile);
+        } else {
+            qDebug() << "requested file not found on server!";
+        }
     }
-    metaObject()->invokeMethod(client,
-                               "allFilesDownloaded",
+    emit newTasks();
+}
+
+void Server::uploadTaskFinished(int storageId, qint64 clientSocketDesc, QString file)
+{
+    printf("%s\n", __FUNCTION__);fflush(stdout);
+    QString user = mClients.value(clientSocketDesc)->getUser();
+    mUploadTasks[user][clientSocketDesc].removeOne(file);
+    mClientFiles[user].append(file);
+    mClientFileStorage.insert(user+"/"+file, storageId );
+
+    if( mUploadTasks.value(user).value(clientSocketDesc).isEmpty() ){
+
+        metaObject()->invokeMethod(mClients.value(clientSocketDesc),
+                                   "replyToUploadFiles",
+                                   Qt::QueuedConnection,
+                                   Q_ARG(QString, "OK"));
+    }
+
+    emit newTasks();
+}
+
+void Server::downloadTaskFinished(int , qint64 clientSocketDesc, QString file)
+{
+    printf("%s\n", __FUNCTION__);fflush(stdout);
+    QString user = mClients.value(clientSocketDesc)->getUser();
+    mDownloadTasks[user][clientSocketDesc].removeOne(file);
+
+    metaObject()->invokeMethod(mClients.value(clientSocketDesc),
+                               "fileReadyForDownload",
                                Qt::QueuedConnection,
-                               ret);
+                               Q_ARG(QString, file));
+
+    if(mDownloadTasks.value(user).value(clientSocketDesc).isEmpty()){
+        metaObject()->invokeMethod(mClients.value(clientSocketDesc),
+                                   "allFilesDownloaded",
+                                   Qt::QueuedConnection);
+    }
+
+}
+
+void Server::assignTasks()
+{
+
 }
 
 void Server::incomingConnection(qintptr socketDescriptor)
@@ -100,5 +141,5 @@ void Server::incomingConnection(qintptr socketDescriptor)
     connect(thread, SIGNAL(downloadFiles(qint64, QString, QStringList)), this, SLOT(downloadFiles(qint64,QString,QStringList)), Qt::QueuedConnection);
 
     thread->start();
-    mClientThreads.insert(socketDescriptor, thread);
+    mClients.insert(socketDescriptor, thread);
 }

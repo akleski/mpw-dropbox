@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QThread>
 #include <QQueue>
+#include <QTimer>
 #include <QTcpSocket>
 
 #include "dropboxpacket.h"
@@ -21,6 +22,8 @@ public:
     qintptr socketDescriptor() const;
     void setSocketDescriptor(const qintptr &value);
 
+    QString getUser() const;
+
 signals:
     void error(QTcpSocket::SocketError socketError);
 
@@ -33,8 +36,6 @@ signals:
     void downloadFiles(qint64, QString, QStringList);
 
 public slots:
-    void socketConnected();
-
     void processData();
 
     void replyToNamePacket();
@@ -54,8 +55,6 @@ private:
     qint64 mSocketDescriptor;
     QTcpSocket *mTcpSocket;
     QString mUser;
-    QThread *mThread;
-    ClientWorker *mWorker;
 };
 
 #endif // CLIENTHANDLER_H

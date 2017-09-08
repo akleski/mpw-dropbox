@@ -15,18 +15,7 @@ void ClientWorker::process()
 {
     printf("%s\n", __FUNCTION__);fflush(stdout);
 
-    mTcpSocket = new QTcpSocket(this);
 
-    if (!mTcpSocket->setSocketDescriptor(mSocketDescriptor)) {
-        printf("ERROR!!!\n");fflush(stdout);
-        return;
-    }
-    if(mTcpSocket->waitForConnected()){
-        printf("Connected!\n");fflush(stdout);
-    }
-    else{
-         printf("Not connected!\n");fflush(stdout);
-    }
 
     emit connected();
 

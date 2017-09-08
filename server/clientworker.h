@@ -32,7 +32,6 @@ signals:
 private:
     qint64 mSocketDescriptor;
     QTcpSocket *mTcpSocket;
-    QQueue<QByteArray> mPacketsToSend;
 };
 
 #endif // CLIENTWORKER_H

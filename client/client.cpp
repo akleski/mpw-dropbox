@@ -73,7 +73,7 @@ void Client::localFolderChanged(QString /*dir*/)
         mNewFiles << *i;
     }
 
-    if(mState == Monitoring){
+    if(mState == Monitoring && !mNewFiles.isEmpty()){
         uploadNewFiles();
         mNewFiles.clear();
     }
@@ -189,17 +189,22 @@ void Client::processServerFiles(QStringList files)
         mNewFiles << *i;
     }
 
-    qDebug() << "DownloadFilesPacket";
-    DownloadFilesPacket packet;
-    packet.setFiles(downloadFiles);
-    qDebug() << "sendPacket";
-    sendPacket(DownloadFiles, &packet);
-    mState = DownloadingFiles;
+    if(!downloadFiles.isEmpty()){
+        qDebug() << "DownloadFilesPacket";
+        DownloadFilesPacket packet;
+        packet.setFiles(downloadFiles);
+        qDebug() << "sendPacket";
+        sendPacket(DownloadFiles, &packet);
+        mState = DownloadingFiles;
+    } else {
+        uploadNewFiles();
+    }
 }
 
 void Client::writeFileToLocal(QString file)
 {
     qDebug() << __FUNCTION__;
+    mLocalFiles.append(file);
     QFile localFile(mPath.absolutePath()+"/"+file);
     qDebug() << "file open: " << localFile.open(QIODevice::WriteOnly);
     localFile.close();
@@ -295,5 +300,6 @@ void Client::sendPacket(PacketType type, void *packet)
     sendStream << (quint32)(block.size() - sizeof(quint32));
 
     qint64 ret = mTcpSocket->write(block);
+    mTcpSocket->flush();
     printf("send packet: %s bytes sent: %lld\n", getTextForPacketType(type), ret);fflush(stdout);
 }
