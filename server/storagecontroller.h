@@ -20,6 +20,14 @@ public:
 
     void setTask(const StorageTask &task);
 
+    StorageWorker *task() const;
+
+    StorageWorker::TaskType lastTaskType() const;
+
+    int id() const;
+
+    void setLastTaskType(const StorageWorker::TaskType &lastTaskType);
+
 public slots:
     void taskDone();
 
@@ -30,7 +38,7 @@ signals:
     void operate();
 
 private:
-    QThread* mThread;
+    QThread workerThread;
 
     int mId;
 

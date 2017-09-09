@@ -11,15 +11,18 @@ StorageWorker::StorageWorker()
 
 StorageWorker::StorageWorker(const StorageWorker::TaskType &type,
                        const qint64 &clientId,
-                       const QString &file) :
+                       const QString &file,
+                       const QString &path) :
     QObject(),
-    StorageTask(type, clientId, file)
+    StorageTask(type, clientId, file),
+    mPath(path)
 {
 }
 
-StorageWorker::StorageWorker(const StorageTask &task)
+StorageWorker::StorageWorker(const StorageTask &task, const QString &path)
     : QObject(),
-      StorageTask(task)
+      StorageTask(task),
+      mPath(path)
 {
 }
 
@@ -27,7 +30,7 @@ void StorageWorker::doWork()
 {
     printf("%s\n", __FUNCTION__);fflush(stdout);
     if(mType == Upload){
-        QFile file(mFile);
+        QFile file(mPath+"/"+mFile);
         QFileInfo fileInfo(file);
         QDir fileDir = fileInfo.absoluteDir();
         if(!fileDir.exists()){

@@ -14,11 +14,18 @@ Server::Server(QObject *parent) : QTcpServer(parent)
     for(int i = 0; i < 5; ++i)
     {
         StorageController* worker = new StorageController(i, this);
-        mWorkers.insert(i, worker);
+
         connect(worker, SIGNAL(downloadTaskFinished(int,qint64,QString)), this, SLOT(downloadTaskFinished(int,qint64,QString)), Qt::QueuedConnection);
         connect(worker, SIGNAL(uploadTaskFinished(int,qint64,QString)), this, SLOT(uploadTaskFinished(int,qint64,QString)), Qt::QueuedConnection);
+
+        mWorkers.append(worker);
+        mStorageDownloadTasks.append(QMap<qint64, QStringList>());
+        mCurrentDownloadTasks.append(mStorageDownloadTasks[i].begin());
     }
     connect(this, SIGNAL(newTasks()), this, SLOT(assignTasks()), Qt::QueuedConnection);
+
+    mCurrentUploadTask = mUploadTasks.begin();
+
 }
 
 Server::~Server()
@@ -38,7 +45,7 @@ void Server::start()
     }
 }
 
-void Server::clientThreadFinished()
+void Server::clientFinished()
 {
     printf("%s\n", __FUNCTION__);fflush(stdout);
     ClientHandler* thread = (ClientHandler*)this->sender();
@@ -63,9 +70,15 @@ void Server::uploadFiles(qint64 clientSocketDesc, QString user, QStringList file
     printf("%s\n", __FUNCTION__);fflush(stdout);
     QStringList userFiles;
     foreach (QString file, files) {
+        mClientFiles[user].append(file);
         userFiles.append(user+"/"+file);
     }
-    mUploadTasks[user].insert(clientSocketDesc,userFiles);
+    bool noTasksBefore = mUploadTasks.isEmpty();
+
+    mUploadTasks.insert(clientSocketDesc,userFiles);
+
+    if(noTasksBefore)
+        mCurrentUploadTask = mUploadTasks.begin();
 
     emit newTasks();
 }
@@ -73,12 +86,17 @@ void Server::uploadFiles(qint64 clientSocketDesc, QString user, QStringList file
 void Server::downloadFiles(qint64 clientSocketDesc, QString user, QStringList files)
 {
     printf("%s\n", __FUNCTION__);fflush(stdout);
-
     foreach (QString file, files) {
         QString userfile = user + "/" + file;
         int storageId = mClientFileStorage.value(userfile, -1);
         if(storageId >= 0){
-            mDownloadTasks[user][clientSocketDesc].append(userfile);
+            bool noTasksBefore = mStorageDownloadTasks[storageId].isEmpty();
+
+            mStorageDownloadTasks[storageId][clientSocketDesc].append(userfile);
+            mDownloadTasks[clientSocketDesc].append(userfile);
+
+            if(noTasksBefore)
+                mCurrentDownloadTasks[storageId] = mStorageDownloadTasks[storageId].begin();
         } else {
             qDebug() << "requested file not found on server!";
         }
@@ -89,13 +107,13 @@ void Server::downloadFiles(qint64 clientSocketDesc, QString user, QStringList fi
 void Server::uploadTaskFinished(int storageId, qint64 clientSocketDesc, QString file)
 {
     printf("%s\n", __FUNCTION__);fflush(stdout);
-    QString user = mClients.value(clientSocketDesc)->getUser();
-    mUploadTasks[user][clientSocketDesc].removeOne(file);
-    mClientFiles[user].append(file);
-    mClientFileStorage.insert(user+"/"+file, storageId );
 
-    if( mUploadTasks.value(user).value(clientSocketDesc).isEmpty() ){
+    mOngoingUploadTasks[clientSocketDesc].removeOne(file);
+    mClientFileStorage.insert(file, storageId);
 
+    if( mUploadTasks.value(clientSocketDesc).isEmpty() &&
+            mOngoingUploadTasks[clientSocketDesc].isEmpty() ){
+        mOngoingUploadTasks.remove(clientSocketDesc);
         metaObject()->invokeMethod(mClients.value(clientSocketDesc),
                                    "replyToUploadFiles",
                                    Qt::QueuedConnection,
@@ -105,35 +123,121 @@ void Server::uploadTaskFinished(int storageId, qint64 clientSocketDesc, QString 
     emit newTasks();
 }
 
-void Server::downloadTaskFinished(int , qint64 clientSocketDesc, QString file)
+void Server::downloadTaskFinished(int storageId, qint64 clientSocketDesc, QString file)
 {
     printf("%s\n", __FUNCTION__);fflush(stdout);
-    QString user = mClients.value(clientSocketDesc)->getUser();
-    mDownloadTasks[user][clientSocketDesc].removeOne(file);
+    mOngoingStorageDownloadTasks[storageId][clientSocketDesc].removeOne(file);
 
     metaObject()->invokeMethod(mClients.value(clientSocketDesc),
                                "fileReadyForDownload",
                                Qt::QueuedConnection,
                                Q_ARG(QString, file));
 
-    if(mDownloadTasks.value(user).value(clientSocketDesc).isEmpty()){
+    if(mDownloadTasks.value(clientSocketDesc).isEmpty() &&
+            mOngoingStorageDownloadTasks[storageId][clientSocketDesc].isEmpty()){
+
+        mOngoingStorageDownloadTasks[storageId].remove(clientSocketDesc);
         metaObject()->invokeMethod(mClients.value(clientSocketDesc),
                                    "allFilesDownloaded",
                                    Qt::QueuedConnection);
     }
 
+    emit newTasks();
 }
 
 void Server::assignTasks()
 {
+    printf("%s\n", __FUNCTION__);fflush(stdout);
 
+    foreach (StorageController* control, mWorkers) {
+        int id = control->id();
+        printf("controller id:%d\n", id);fflush(stdout);
+        if( control->task() == NULL ){
+            StorageTask::TaskType nextTask;
+
+            if( control->lastTaskType() == StorageTask::Download ){
+                if( !mUploadTasks.isEmpty() ){
+                    nextTask = StorageTask::Upload;
+                } else {
+                    printf("mUploadTasks empty\n");fflush(stdout);
+                    nextTask = StorageTask::Download;
+                }
+
+            } else if( control->lastTaskType() == StorageTask::Upload ){
+                if(!mStorageDownloadTasks[id].isEmpty()){
+                    nextTask = StorageTask::Download;
+                }else{
+                    printf("mStorageDownloadTasks[i] empty\n");fflush(stdout);
+                    nextTask = StorageTask::Upload;
+                }
+            }
+
+            if(mStorageDownloadTasks[id].isEmpty() && mUploadTasks.isEmpty()){
+                continue;
+            }
+
+            if(nextTask == StorageTask::Upload){
+                if(mUploadTasks.isEmpty()){
+                    printf("no more upload tasks\n");fflush(stdout);
+                    continue;
+                }
+                printf("setTask Upload\n");fflush(stdout);
+                qint64 clientSocketDesc = mCurrentUploadTask.key();
+                control->setTask(StorageTask::Upload,
+                                 clientSocketDesc,
+                                 mCurrentUploadTask.value().first());
+
+                mOngoingUploadTasks[clientSocketDesc].append(mCurrentUploadTask.value().first());
+                mUploadTasks[clientSocketDesc].removeFirst();
+
+                if(mUploadTasks[clientSocketDesc].isEmpty()){
+                    mCurrentUploadTask = mUploadTasks.erase(mCurrentUploadTask);
+                } else {
+                    ++mCurrentUploadTask;
+                }
+
+                if(mCurrentUploadTask == mUploadTasks.end())
+                    mCurrentUploadTask = mUploadTasks.begin();
+            }
+
+            if(nextTask == StorageTask::Download){
+                if(mStorageDownloadTasks[id].isEmpty() ){
+                    printf("no more download tasks\n");fflush(stdout);
+                    continue;
+                }
+                printf("setTask Download\n");fflush(stdout);
+                qint64 clientSocketDesc = mCurrentDownloadTasks[id].key();
+                control->setTask(StorageTask::Download,
+                                 clientSocketDesc,
+                                 mCurrentDownloadTasks[id].value().first());
+
+                mOngoingStorageDownloadTasks[id][clientSocketDesc].append(mCurrentDownloadTasks[id].value().first());
+                mStorageDownloadTasks[id][clientSocketDesc].removeOne(mCurrentDownloadTasks[id].value().first());
+                mDownloadTasks[clientSocketDesc].removeOne(mCurrentDownloadTasks[id].value().first());
+
+                if(mStorageDownloadTasks[id][clientSocketDesc].isEmpty()){
+                    mCurrentDownloadTasks[id] =
+                            mStorageDownloadTasks[id].erase(mCurrentDownloadTasks[id]);
+                } else {
+                    ++mCurrentDownloadTasks[id];
+                }
+
+                if(mDownloadTasks[clientSocketDesc].isEmpty()){
+                    mDownloadTasks.remove(clientSocketDesc);
+                }
+
+                if(mCurrentDownloadTasks[id] == mStorageDownloadTasks[id].end())
+                    mCurrentDownloadTasks[id] = mStorageDownloadTasks[id].begin();
+            }
+        }
+    }
 }
 
 void Server::incomingConnection(qintptr socketDescriptor)
 {
     printf("%s sd: %d\n", __FUNCTION__, socketDescriptor);fflush(stdout);
     ClientHandler *thread = new ClientHandler(socketDescriptor, this);
-    connect(thread, SIGNAL(finished()), this, SLOT(clientThreadFinished()));
+    connect(thread, SIGNAL(finished()), this, SLOT(clientFinished()));
     connect(thread, SIGNAL(finished()), thread, SLOT(deleteLater()));
 
     connect(thread, SIGNAL(getServerFilesPacketReceived(qint64, QString)), this, SLOT(getServerFilesForUser(qint64,QString)), Qt::QueuedConnection);

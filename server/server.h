@@ -21,7 +21,7 @@ signals:
     void newTasks();
 
 public slots:
-    void clientThreadFinished();
+    void clientFinished();
 
     void getServerFilesForUser(qint64, QString);
     void uploadFiles(qint64, QString, QStringList);
@@ -36,15 +36,21 @@ protected:
     virtual void incomingConnection(qintptr socketDescriptor);
 
 private:
-    QMap<int, StorageController*> mWorkers;
+    QVector<StorageController*> mWorkers;
 
     QHash<qint64, ClientHandler*> mClients;
 
     QMap<QString, int> mClientFileStorage;
     QHash<QString, QStringList> mClientFiles;
 
-    QMap<QString, QMap<qint64, QStringList>> mUploadTasks;
-    QMap<QString, QMap<qint64, QStringList>> mDownloadTasks;
+    QMap<qint64, QStringList> mUploadTasks;
+    QMap<qint64, QStringList> mOngoingUploadTasks;
+    QMap<qint64, QStringList>::iterator mCurrentUploadTask;
+
+    QMap<qint64, QStringList> mDownloadTasks;
+    QVector<QMap<qint64, QStringList>> mStorageDownloadTasks;
+    QVector<QMap<qint64, QStringList>> mOngoingStorageDownloadTasks;
+    QVector<QMap<qint64, QStringList>::iterator> mCurrentDownloadTasks;
 };
 
 #endif // SERVER_H
