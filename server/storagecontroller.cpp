@@ -1,15 +1,31 @@
 
 #include "storagecontroller.h"
 
+#include <QDebug>
+
 StorageController::StorageController(int id, QObject *parent)
     : QObject(parent)
     , mId(id)
     , mStorage(QDir::currentPath()+"/"+QString::number(mId))
     , mTask(NULL)
     , mLastTaskType(StorageWorker::TaskType::Upload)
+    , mFileCount(0)
+    , mUserFilesCvs(mStorage.absolutePath()+"/storage.info")
 {
     printf("%s path: %s\n", __FUNCTION__, mStorage.absolutePath().toStdString().c_str()); fflush(stdout);
     mStorage.mkpath(mStorage.absolutePath());
+
+    mUserFilesCvs.open(QIODevice::ReadOnly | QIODevice::Text);
+
+    while(!mUserFilesCvs.atEnd()){
+        QString line = QString::fromUtf8(mUserFilesCvs.readLine()).trimmed();
+        QStringList values = line.split("\",\"");
+        QString userName = values.at(0);
+        QString file = values.at(1);
+        mUserFiles[userName.remove("\"")].append(file.remove("\""));
+        ++mFileCount;
+    }
+    mUserFilesCvs.close();
 }
 
 StorageController::~StorageController()
@@ -18,6 +34,7 @@ StorageController::~StorageController()
 
     workerThread.quit();
     workerThread.wait();
+    mUserFilesCvs.close();
 }
 
 void StorageController::setTask(const StorageWorker::TaskType &type, const qint64 &clientId, const QString &file)
@@ -26,12 +43,12 @@ void StorageController::setTask(const StorageWorker::TaskType &type, const qint6
     mTask = new StorageWorker(type, clientId, file, mStorage.absolutePath());
 
     mTask->moveToThread(&workerThread);
-    connect(&workerThread, SIGNAL(started()), mTask, SLOT(doWork()));
     connect(this, SIGNAL(operate()), mTask, SLOT(doWork()));
     connect(mTask, SIGNAL(done()), this, SLOT(taskDone()));
 
     printf("thread start\n");fflush(stdout);
     workerThread.start();
+    emit operate();
 }
 
 void StorageController::setTask(const StorageTask &task)
@@ -47,7 +64,18 @@ StorageWorker *StorageController::task() const
 void StorageController::taskDone()
 {
     if(mTask->type() == StorageWorker::Upload){
+        emit fileCountChanged(mId, ++mFileCount);
         emit uploadTaskFinished(mId, mTask->clientId(), mTask->file());
+
+        QStringList values = mTask->file().split("/");
+        QString userName = values.at(0);
+        QString file = values.at(1);
+        QString line = "\""+userName+"\",\""+file+"\"\n";
+        if(!mUserFilesCvs.isOpen()){
+            mUserFilesCvs.open(QIODevice::Append | QIODevice::Text);
+        }
+        qDebug() << "filesCVS write: "<<mUserFilesCvs.write(line.toUtf8());
+        mUserFilesCvs.flush();
     } else if(mTask->type() == StorageWorker::Download){
         emit downloadTaskFinished(mId, mTask->clientId(), mTask->file());
     }
@@ -55,6 +83,16 @@ void StorageController::taskDone()
     mLastTaskType = mTask->type();
     mTask->deleteLater();
     mTask=NULL;
+}
+
+quint64 StorageController::fileCount() const
+{
+    return mFileCount;
+}
+
+QMap<QString, QStringList> StorageController::userFiles() const
+{
+    return mUserFiles;
 }
 
 void StorageController::setLastTaskType(const StorageWorker::TaskType &lastTaskType)

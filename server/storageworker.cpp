@@ -28,7 +28,7 @@ StorageWorker::StorageWorker(const StorageTask &task, const QString &path)
 
 void StorageWorker::doWork()
 {
-    printf("%s\n", __FUNCTION__);fflush(stdout);
+    printf("%s - file: %s\n", __FUNCTION__, mFile.toStdString().c_str());fflush(stdout);
     if(mType == Upload){
         QFile file(mPath+"/"+mFile);
         QFileInfo fileInfo(file);

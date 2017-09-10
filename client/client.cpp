@@ -206,7 +206,7 @@ void Client::writeFileToLocal(QString file)
     qDebug() << __FUNCTION__;
     mLocalFiles.append(file);
     QFile localFile(mPath.absolutePath()+"/"+file);
-    qDebug() << "file open: " << localFile.open(QIODevice::WriteOnly);
+    localFile.open(QIODevice::WriteOnly);
     localFile.close();
 }
 

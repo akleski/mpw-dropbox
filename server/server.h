@@ -32,25 +32,30 @@ public slots:
 
     void assignTasks();
 
+    void storageFileCountChanged(int storageId, quint64 fileCount);
+
 protected:
     virtual void incomingConnection(qintptr socketDescriptor);
 
 private:
     QVector<StorageController*> mStorageControllers;
 
+    QVector<quint64> mStorageFileCounts;
+    quint64 mStorageFileCountsMean;
+
     QHash<qint64, ClientHandler*> mClients;
 
-    QMap<QString, int> mUserfileStorage;//mapa plik_usera - storage
-    QHash<QString, QStringList> mUserFiles;//mapa user - pliki
+    QMap<QString, int> mUserfileStorage;//map userfile - storageId
+    QHash<QString, QStringList> mUserFiles;//map user - files
 
-    QMap<qint64, QStringList> mUploadTasks;//mapa klient (client socket descriptor) - pliki do uploadu
-    QMap<qint64, QStringList> mOngoingUploadTasks;//mapa klient - obsługiwany/uploadowany pliki
-    QMap<qint64, QStringList>::iterator mCurrentUploadTask;//iterator aktualnego taska
+    QMap<qint64, QStringList> mUploadTasks;//map client (client socket descriptor) - upload files
+    QMap<qint64, QStringList> mOngoingUploadTasks;//map client - uploading files at this moment
+    QMap<qint64, QStringList>::iterator mCurrentUploadTask;//iterator marking current task
 
-    QMap<qint64, QStringList> mDownloadTasks;//jw
-    QVector<QMap<qint64, QStringList>> mStorageDownloadTasks;//poniewaz pliki sa na konkretnych serverach/starage/dyskach to list DL tasków musi byc osobna  dla poszczegolnych starge
-    QMap<qint64, QStringList> mOngoingDownloadTasks;//tablica map tasków jw //TODO wywalic vector
-    QVector<QMap<qint64, QStringList>::iterator> mCurrentDownloadTasks;//tablica iteratrów jw
+    QMap<qint64, QStringList> mDownloadTasks;//see above
+    QVector<QMap<qint64, QStringList>> mStorageDownloadTasks;//uploaded files are on specific storagtes, so download task list has to be separate for each storage
+    QMap<qint64, QStringList> mOngoingDownloadTasks;//map client - downloading files at this moment
+    QVector<QMap<qint64, QStringList>::iterator> mCurrentDownloadTasks;//iterator marking current task
 };
 
 #endif // SERVER_H

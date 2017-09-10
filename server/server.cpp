@@ -18,9 +18,22 @@ Server::Server(QObject *parent) : QTcpServer(parent)
         connect(controller, SIGNAL(downloadTaskFinished(int,qint64,QString)), this, SLOT(downloadTaskFinished(int,qint64,QString)), Qt::QueuedConnection);
         connect(controller, SIGNAL(uploadTaskFinished(int,qint64,QString)), this, SLOT(uploadTaskFinished(int,qint64,QString)), Qt::QueuedConnection);
 
+        connect(controller, SIGNAL(fileCountChanged(int,quint64)), this, SLOT(storageFileCountChanged(int,quint64)));
         mStorageControllers.append(controller);
         mStorageDownloadTasks.append(QMap<qint64, QStringList>());
         mCurrentDownloadTasks.append(mStorageDownloadTasks[i].begin());
+
+        mStorageFileCounts.append(controller->fileCount());
+
+        QMap<QString, QStringList> userfiles = controller->userFiles();
+
+        for( QMap<QString, QStringList>::iterator it = userfiles.begin(); it != userfiles.end(); ++it){
+            QString user = it.key();
+            mUserFiles[user].append(it.value());
+            foreach(QString file, it.value()){
+                mUserfileStorage[user+"/"+file] = i;
+            }
+        }
     }
     connect(this, SIGNAL(newTasks()), this, SLOT(assignTasks()), Qt::QueuedConnection);
 
@@ -30,7 +43,6 @@ Server::Server(QObject *parent) : QTcpServer(parent)
 Server::~Server()
 {
     printf("%s\n", __FUNCTION__);fflush(stdout);
-
 }
 
 void Server::start()
@@ -128,10 +140,12 @@ void Server::downloadTaskFinished(int, qint64 clientSocketDesc, QString file)
     printf("%s\n", __FUNCTION__);fflush(stdout);
     mOngoingDownloadTasks[clientSocketDesc].removeOne(file);
 
+    QStringList values = file.split("/");
+
     metaObject()->invokeMethod(mClients.value(clientSocketDesc),
                                "fileReadyForDownload",
                                Qt::QueuedConnection,
-                               Q_ARG(QString, file));//userfile?
+                               Q_ARG(QString, values.at(1)));
 
     if(mDownloadTasks.value(clientSocketDesc).isEmpty() &&
             mOngoingDownloadTasks[clientSocketDesc].isEmpty()){
@@ -147,12 +161,12 @@ void Server::downloadTaskFinished(int, qint64 clientSocketDesc, QString file)
 
 void Server::assignTasks()
 {
-    printf("%s\n", __FUNCTION__);fflush(stdout);
-
     foreach (StorageController* control, mStorageControllers) {
         int id = control->id();
-        printf("controller id:%d\n", id);fflush(stdout);
         if( control->task() == NULL ){
+            printf("%s\n", __FUNCTION__);fflush(stdout);
+            printf("controller id:%d\n", id);fflush(stdout);
+
             StorageTask::TaskType nextTask;
 
             if(mStorageDownloadTasks[id].isEmpty() && mUploadTasks.isEmpty()){
@@ -177,27 +191,31 @@ void Server::assignTasks()
             }
 
             if(nextTask == StorageTask::Upload){
-                if(mUploadTasks.isEmpty()){
-                    printf("no more upload tasks\n");fflush(stdout);
-                    continue;
-                }
-                printf("setTask Upload\n");fflush(stdout);
-                qint64 clientSocketDesc = mCurrentUploadTask.key();
-                control->setTask(StorageTask::Upload,
-                                 clientSocketDesc,
-                                 mCurrentUploadTask.value().first());
-
-                mOngoingUploadTasks[clientSocketDesc].append(mCurrentUploadTask.value().first());
-                mUploadTasks[clientSocketDesc].removeFirst();
-
-                if(mUploadTasks[clientSocketDesc].isEmpty()){
-                    mCurrentUploadTask = mUploadTasks.erase(mCurrentUploadTask);
+                if(mStorageFileCounts[id] >= mStorageFileCountsMean){
+                    printf("too many files on storage, try download\n");fflush(stdout);
                 } else {
-                    ++mCurrentUploadTask;
-                }
+                    if(mUploadTasks.isEmpty()){
+                        printf("no more upload tasks\n");fflush(stdout);
+                        continue;
+                    }
+                    printf("setTask Upload\n");fflush(stdout);
+                    qint64 clientSocketDesc = mCurrentUploadTask.key();
+                    control->setTask(StorageTask::Upload,
+                                     clientSocketDesc,
+                                     mCurrentUploadTask.value().first());
 
-                if(mCurrentUploadTask == mUploadTasks.end())
-                    mCurrentUploadTask = mUploadTasks.begin();
+                    mOngoingUploadTasks[clientSocketDesc].append(mCurrentUploadTask.value().first());
+                    mUploadTasks[clientSocketDesc].removeFirst();
+
+                    if(mUploadTasks[clientSocketDesc].isEmpty()){
+                        mCurrentUploadTask = mUploadTasks.erase(mCurrentUploadTask);
+                    } else {
+                        ++mCurrentUploadTask;
+                    }
+
+                    if(mCurrentUploadTask == mUploadTasks.end())
+                        mCurrentUploadTask = mUploadTasks.begin();
+                }
             }// endof upload task
 
             if(nextTask == StorageTask::Download){
@@ -212,8 +230,8 @@ void Server::assignTasks()
                                  mCurrentDownloadTasks[id].value().first());
 
                 mOngoingDownloadTasks[clientSocketDesc].append(mCurrentDownloadTasks[id].value().first());
-                mStorageDownloadTasks[id][clientSocketDesc].removeOne(mCurrentDownloadTasks[id].value().first());
                 mDownloadTasks[clientSocketDesc].removeOne(mCurrentDownloadTasks[id].value().first());
+                mStorageDownloadTasks[id][clientSocketDesc].removeFirst();
 
                 if(mStorageDownloadTasks[id][clientSocketDesc].isEmpty()){
                     mCurrentDownloadTasks[id] =
@@ -231,6 +249,12 @@ void Server::assignTasks()
             }
         }
     }
+}
+
+void Server::storageFileCountChanged(int storageId, quint64 fileCount)
+{
+    mStorageFileCounts[storageId] = fileCount;
+    mStorageFileCountsMean = 1 + std::ceil(std::accumulate(mStorageFileCounts.begin(), mStorageFileCounts.end(), .0) / mStorageFileCounts.size());
 }
 
 void Server::incomingConnection(qintptr socketDescriptor)

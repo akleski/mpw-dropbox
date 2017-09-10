@@ -32,12 +32,15 @@ int main(int argc, char *argv[])
     parser.process(app);
 
     QDir dir(parser.value(directoryOption));
-    if(!dir.exists())
-    {
+    if(!dir.exists())    {
         qDebug() << "dir ("<<dir.absolutePath()<<") doesnt exists!";
         return 0;
     }
 
+    if(parser.value(userOption).isEmpty()){
+        qDebug() << "username cannot be empty!";
+        return 0;
+    }
     Client cli(parser.value(userOption), dir.absolutePath());
     cli.start();
 

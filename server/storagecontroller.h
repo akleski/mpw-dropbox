@@ -4,6 +4,8 @@
 #include <QObject>
 #include <QThread>
 #include <QDir>
+#include <QStringList>
+#include <QMap>
 
 #include "storageworker.h"
 
@@ -28,6 +30,10 @@ public:
 
     void setLastTaskType(const StorageWorker::TaskType &lastTaskType);
 
+    QMap<QString, QStringList> userFiles() const;
+
+    quint64 fileCount() const;
+
 public slots:
     void taskDone();
 
@@ -36,6 +42,8 @@ signals:
     void downloadTaskFinished(int, qint64, QString);
 
     void operate();
+
+    void fileCountChanged(int, quint64);
 
 private:
     QThread workerThread;
@@ -47,6 +55,12 @@ private:
     StorageWorker* mTask;
 
     StorageWorker::TaskType mLastTaskType;
+
+    quint64 mFileCount;
+
+    QFile mUserFilesCvs;
+
+    QMap<QString, QStringList> mUserFiles;
 };
 
 #endif // CONTROLLER_H
