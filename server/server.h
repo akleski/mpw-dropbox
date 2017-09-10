@@ -36,21 +36,21 @@ protected:
     virtual void incomingConnection(qintptr socketDescriptor);
 
 private:
-    QVector<StorageController*> mWorkers;
+    QVector<StorageController*> mStorageControllers;
 
     QHash<qint64, ClientHandler*> mClients;
 
-    QMap<QString, int> mClientFileStorage;
-    QHash<QString, QStringList> mClientFiles;
+    QMap<QString, int> mUserfileStorage;//mapa plik_usera - storage
+    QHash<QString, QStringList> mUserFiles;//mapa user - pliki
 
-    QMap<qint64, QStringList> mUploadTasks;
-    QMap<qint64, QStringList> mOngoingUploadTasks;
-    QMap<qint64, QStringList>::iterator mCurrentUploadTask;
+    QMap<qint64, QStringList> mUploadTasks;//mapa klient (client socket descriptor) - pliki do uploadu
+    QMap<qint64, QStringList> mOngoingUploadTasks;//mapa klient - obsługiwany/uploadowany pliki
+    QMap<qint64, QStringList>::iterator mCurrentUploadTask;//iterator aktualnego taska
 
-    QMap<qint64, QStringList> mDownloadTasks;
-    QVector<QMap<qint64, QStringList>> mStorageDownloadTasks;
-    QVector<QMap<qint64, QStringList>> mOngoingStorageDownloadTasks;
-    QVector<QMap<qint64, QStringList>::iterator> mCurrentDownloadTasks;
+    QMap<qint64, QStringList> mDownloadTasks;//jw
+    QVector<QMap<qint64, QStringList>> mStorageDownloadTasks;//poniewaz pliki sa na konkretnych serverach/starage/dyskach to list DL tasków musi byc osobna  dla poszczegolnych starge
+    QMap<qint64, QStringList> mOngoingDownloadTasks;//tablica map tasków jw //TODO wywalic vector
+    QVector<QMap<qint64, QStringList>::iterator> mCurrentDownloadTasks;//tablica iteratrów jw
 };
 
 #endif // SERVER_H

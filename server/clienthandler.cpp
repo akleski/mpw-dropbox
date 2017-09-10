@@ -138,7 +138,6 @@ void ClientHandler::fileReadyForDownload(QString file)
     DownloadFilePacket resp;
     resp.setFile(file);
     sendPacket(DownloadFile, &resp);
-    sleep(2);
 }
 
 void ClientHandler::allFilesDownloaded()

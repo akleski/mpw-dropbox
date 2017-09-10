@@ -5,7 +5,7 @@ GetServerFilesPacket::GetServerFilesPacket()
 
 }
 
-QDataStream &operator<<(QDataStream &out, const GetServerFilesPacket &packet)
+QDataStream &operator<<(QDataStream &out, const GetServerFilesPacket &)
 {
     return out;
 }

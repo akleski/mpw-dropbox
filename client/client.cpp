@@ -23,14 +23,14 @@ Client::Client(QString user, QString path, QObject *parent) :
     connect(this, SIGNAL(serverFilesRespReceived(QStringList)),
             this, SLOT(processServerFiles(QStringList)), Qt::QueuedConnection);
 
-    connect(this, SIGNAL(filesUploaded()),
-            this, SLOT(startMonitoring()), Qt::QueuedConnection);
-
     connect(this, SIGNAL(fileDownloaded(QString)),
             this, SLOT(writeFileToLocal(QString)), Qt::QueuedConnection);
 
     connect(this, SIGNAL(allFilesDownloaded()),
             this, SLOT(uploadNewFiles()), Qt::QueuedConnection);
+
+    connect(this, SIGNAL(filesUploaded()),
+            this, SLOT(startMonitoring()), Qt::QueuedConnection);
 }
 
 Client::~Client()
@@ -219,11 +219,15 @@ void Client::startMonitoring()
 void Client::uploadNewFiles()
 {
     qDebug() << __FUNCTION__;
-    UploadFilesPacket packet;
-    packet.setFiles(mNewFiles);
-    sendPacket(UploadFiles, &packet);
-    mState = SendingFiles;
-    mNewFiles.clear();
+    if(!mNewFiles.isEmpty()){
+        UploadFilesPacket packet;
+        packet.setFiles(mNewFiles);
+        sendPacket(UploadFiles, &packet);
+        mState = SendingFiles;
+        mNewFiles.clear();
+    } else {
+        startMonitoring();
+    }
 }
 
 void Client::sendPacket(PacketType type, void *packet)
