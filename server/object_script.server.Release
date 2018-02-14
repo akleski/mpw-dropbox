@@ -1,0 +1,12 @@
+INPUT(
+./release\main.o
+./release\server.o
+./release\clienthandler.o
+./release\storagecontroller.o
+./release\storageworker.o
+./release\storagetask.o
+./release\moc_server.o
+./release\moc_clienthandler.o
+./release\moc_storagecontroller.o
+./release\moc_storageworker.o
+);

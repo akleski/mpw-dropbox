@@ -16,7 +16,7 @@ ClientHandler::ClientHandler(qintptr socketDescriptor, QObject *parent)
 
 void ClientHandler::start()
 {
-    printf("%s\n", __FUNCTION__);fflush(stdout);
+    printf("%s\nClientHandler", __FUNCTION__);fflush(stdout);
 
     mTcpSocket = new QTcpSocket(this);
 

@@ -35,6 +35,8 @@ signals:
 
     void downloadFiles(qint64, QString, QStringList);
 
+    void finished();
+
 public slots:
     void processData();
 

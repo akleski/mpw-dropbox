@@ -116,8 +116,9 @@ void Client::receive()
             {
                 GetServerFilesResponsePacket resp;
                 clientReadStream >> resp;
-                qDebug() << "server files count: " << resp.files().count();
-                qDebug() << resp.files();
+                qDebug() << "server files count: " << resp.files().toSet().count();//server contains duplicated files
+                qDebug() << resp.files().toSet();//temporary solution to mask the problem using toSet()
+
 
                 emit serverFilesRespReceived(resp.files());
                 break;
@@ -172,8 +173,9 @@ void Client::processServerFiles(QStringList files)
 {
     qDebug() << __FUNCTION__;
     QStringList downloadFiles;
-    QSet<QString> serverOnlyFiles = files.toSet().subtract( mLocalFiles.toSet() );
-    QSet<QString> localOnlyFiles = mLocalFiles.toSet().subtract( files.toSet() );
+    //set arithmetic instead of for loops
+    QSet<QString> serverOnlyFiles = files.toSet().subtract( mLocalFiles.toSet() ); //files to be donwloaded
+    QSet<QString> localOnlyFiles = mLocalFiles.toSet().subtract( files.toSet() );//files to be uploaded
 
     qDebug() << "serverOnlyFiles: ";
     for (QSet<QString>::iterator i = serverOnlyFiles.begin(); i != serverOnlyFiles.end();++i)
@@ -300,10 +302,10 @@ void Client::sendPacket(PacketType type, void *packet)
     }
 
     //update size
-    sendStream.device()->seek(0);
+    sendStream.device()->seek(0);//poczatek gdzie jest size packietu, placeholder
     sendStream << (quint32)(block.size() - sizeof(quint32));
 
     qint64 ret = mTcpSocket->write(block);
     mTcpSocket->flush();
-    printf("send packet: %s bytes sent: %lld\n", getTextForPacketType(type), ret);fflush(stdout);
+    printf("send packet type: %s, bytes sent: %lld\n", getTextForPacketType(type), ret);fflush(stdout);
 }

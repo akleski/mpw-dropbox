@@ -29,6 +29,6 @@ QDataStream &operator>>(QDataStream &in, NameResponsePacket &packet)
 {
     QString status;
     in >> status;
-    packet = NameResponsePacket(status);\
+    packet = NameResponsePacket(status);
     return in;
 }

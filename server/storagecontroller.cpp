@@ -1,8 +1,6 @@
 
 #include "storagecontroller.h"
 
-#include <QDebug>
-
 StorageController::StorageController(int id, QObject *parent)
     : QObject(parent)
     , mId(id)
@@ -74,7 +72,7 @@ void StorageController::taskDone()
         if(!mUserFilesCvs.isOpen()){
             mUserFilesCvs.open(QIODevice::Append | QIODevice::Text);
         }
-        qDebug() << "filesCVS write: "<<mUserFilesCvs.write(line.toUtf8());
+        mUserFilesCvs.write(line.toUtf8());
         mUserFilesCvs.flush();
     } else if(mTask->type() == StorageWorker::Download){
         emit downloadTaskFinished(mId, mTask->clientId(), mTask->file());

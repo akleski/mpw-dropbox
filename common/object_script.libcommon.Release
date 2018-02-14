@@ -1,0 +1,12 @@
+CREATE release\libcommon.a
+ADDMOD release\dropboxpacket.o
+ADDMOD release\namepacket.o
+ADDMOD release\nameresponsepacket.o
+ADDMOD release\getserverfilespacket.o
+ADDMOD release\getserverfilesresponsepacket.o
+ADDMOD release\uploadfilespacket.o
+ADDMOD release\uploadfilesresponsepacket.o
+ADDMOD release\downloadfilespacket.o
+ADDMOD release\downloadfilepacket.o
+ADDMOD release\downloadfilesresponsepacket.o
+SAVE

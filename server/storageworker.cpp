@@ -26,6 +26,7 @@ StorageWorker::StorageWorker(const StorageTask &task, const QString &path)
 {
 }
 
+//executed in different thread
 void StorageWorker::doWork()
 {
     printf("%s - file: %s\n", __FUNCTION__, mFile.toStdString().c_str());fflush(stdout);
@@ -40,6 +41,7 @@ void StorageWorker::doWork()
         file.open(QIODevice::WriteOnly);
         file.close();
     }
+    //if mType == download, then do nothing
     sleep(qrand() % 14 + 1);
     emit done();
 }

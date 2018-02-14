@@ -17,9 +17,10 @@ Server::Server(QObject *parent) : QTcpServer(parent)
 
         connect(controller, SIGNAL(downloadTaskFinished(int,qint64,QString)), this, SLOT(downloadTaskFinished(int,qint64,QString)), Qt::QueuedConnection);
         connect(controller, SIGNAL(uploadTaskFinished(int,qint64,QString)), this, SLOT(uploadTaskFinished(int,qint64,QString)), Qt::QueuedConnection);
-
         connect(controller, SIGNAL(fileCountChanged(int,quint64)), this, SLOT(storageFileCountChanged(int,quint64)));
+
         mStorageControllers.append(controller);
+
         mStorageDownloadTasks.append(QMap<qint64, QStringList>());
         mCurrentDownloadTasks.append(mStorageDownloadTasks[i].begin());
 
@@ -69,7 +70,7 @@ void Server::getServerFilesForUser(qint64 clientSocketDesc, QString user)
     QStringList files;
 
     files.append(mUserFiles.value(user));
-
+//replaced emit() with invokeMethod, due to some problem with threads
     metaObject()->invokeMethod(mClients.value(clientSocketDesc),
                                "replyToGetServerFiles",
                                Qt::QueuedConnection,
@@ -109,7 +110,7 @@ void Server::downloadFiles(qint64 clientSocketDesc, QString user, QStringList fi
             if(noTasksBefore)
                 mCurrentDownloadTasks[storageId] = mStorageDownloadTasks[storageId].begin();
         } else {
-            qDebug() << "requested file not found on server!";
+            printf("requested file not found on server!");fflush(stdout);
         }
     }
     emit newTasks();
@@ -172,7 +173,7 @@ void Server::assignTasks()
             if(mStorageDownloadTasks[id].isEmpty() && mUploadTasks.isEmpty()){
                 continue;
             }
-
+            //toggle between upload and download tasks
             if( control->lastTaskType() == StorageTask::Download ){
                 if( !mUploadTasks.isEmpty() ){
                     nextTask = StorageTask::Upload;
@@ -185,7 +186,7 @@ void Server::assignTasks()
                 if(!mStorageDownloadTasks[id].isEmpty()){
                     nextTask = StorageTask::Download;
                 }else{
-                    printf("mStorageDownloadTasks[i] empty\n");fflush(stdout);
+                    printf("mStorageDownloadTasks[%d] empty\n", id);fflush(stdout);
                     nextTask = StorageTask::Upload;
                 }
             }
@@ -259,8 +260,9 @@ void Server::storageFileCountChanged(int storageId, quint64 fileCount)
 
 void Server::incomingConnection(qintptr socketDescriptor)
 {
-    printf("%s sd: %d\n", __FUNCTION__, socketDescriptor);fflush(stdout);
+    printf("%s socketDescriptor: %d\n", __FUNCTION__, socketDescriptor);fflush(stdout);
     ClientHandler *clientHandler = new ClientHandler(socketDescriptor, this);
+
     connect(clientHandler, SIGNAL(finished()), this, SLOT(clientFinished()));
     connect(clientHandler, SIGNAL(finished()), clientHandler, SLOT(deleteLater()));
 

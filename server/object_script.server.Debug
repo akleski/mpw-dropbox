@@ -1,0 +1,12 @@
+INPUT(
+./debug\main.o
+./debug\server.o
+./debug\clienthandler.o
+./debug\storagecontroller.o
+./debug\storageworker.o
+./debug\storagetask.o
+./debug\moc_server.o
+./debug\moc_clienthandler.o
+./debug\moc_storagecontroller.o
+./debug\moc_storageworker.o
+);

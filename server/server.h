@@ -37,25 +37,25 @@ public slots:
 protected:
     virtual void incomingConnection(qintptr socketDescriptor);
 
-private:
+private:    
     QVector<StorageController*> mStorageControllers;
 
     QVector<quint64> mStorageFileCounts;
     quint64 mStorageFileCountsMean;
 
-    QHash<qint64, ClientHandler*> mClients;
+    QHash<qint64, ClientHandler*> mClients; //mapa clientSocketDescriptor - clientHandler
 
     QMap<QString, int> mUserfileStorage;//map userfile - storageId
     QHash<QString, QStringList> mUserFiles;//map user - files
 
-    QMap<qint64, QStringList> mUploadTasks;//map client (client socket descriptor) - upload files
-    QMap<qint64, QStringList> mOngoingUploadTasks;//map client - uploading files at this moment
-    QMap<qint64, QStringList>::iterator mCurrentUploadTask;//iterator marking current task
+    QMap<qint64, QStringList> mUploadTasks;//map clientSocketDescriptor - upload files
+    QMap<qint64, QStringList> mOngoingUploadTasks;//map clientSocketDescriptor - uploading files at this moment
+    QMap<qint64, QStringList>::iterator mCurrentUploadTask;//iterator marking current UP task
 
-    QMap<qint64, QStringList> mDownloadTasks;//see above
+    QMap<qint64, QStringList> mDownloadTasks;//map clientSocketDescriptor -download files
     QVector<QMap<qint64, QStringList>> mStorageDownloadTasks;//uploaded files are on specific storagtes, so download task list has to be separate for each storage
-    QMap<qint64, QStringList> mOngoingDownloadTasks;//map client - downloading files at this moment
-    QVector<QMap<qint64, QStringList>::iterator> mCurrentDownloadTasks;//iterator marking current task
+    QMap<qint64, QStringList> mOngoingDownloadTasks;//map clientSocketDescriptor - downloading files at this moment
+    QVector<QMap<qint64, QStringList>::iterator> mCurrentDownloadTasks;//iterator marking current DL task
 };
 
 #endif // SERVER_H

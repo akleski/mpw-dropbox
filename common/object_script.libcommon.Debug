@@ -1,0 +1,12 @@
+CREATE debug\libcommon.a
+ADDMOD debug\dropboxpacket.o
+ADDMOD debug\namepacket.o
+ADDMOD debug\nameresponsepacket.o
+ADDMOD debug\getserverfilespacket.o
+ADDMOD debug\getserverfilesresponsepacket.o
+ADDMOD debug\uploadfilespacket.o
+ADDMOD debug\uploadfilesresponsepacket.o
+ADDMOD debug\downloadfilespacket.o
+ADDMOD debug\downloadfilepacket.o
+ADDMOD debug\downloadfilesresponsepacket.o
+SAVE
